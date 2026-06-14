@@ -16,14 +16,20 @@ fully usable offline (the sound is synthesised, so there are no audio downloads)
 
 ## Features
 
-- **Choir ison** — synthesised vocal drone (1–8 voices) with formant-shaped vowels
-  (Α/ah, Ο/oh, Ου/oo, Ε/eh, Ι/ee, Μ/hum), per-voice vibrato and drift, and breath.
+- **Choir ison** — synthesised vocal drone (1–8 voices) using a warm glottal
+  waveform and formant-shaped vowels (Α/ah, Ο/oh, Ου/oo, Ε/eh, Ι/ee, Μ/hum), with
+  per-voice vibrato, slow drift, amplitude shimmer and breath.
+- **Humanised ensemble** — singers enter with staggered, randomised onsets and
+  drift independently, so the choir gathers and breathes rather than snapping on.
+- **Bass foundation** — an optional sustained voice an octave below for weight.
 - **Eight echoi** — tap a mode; the parallage ladder and resting note update.
 - **Microtonal ladder** — notes are spaced by their true moria intervals; tap any
   note to rest or move the ison there, with a seamless glide.
 - **Tuning** — adjustable diapason (the Νη reference, in Hz) and Low/Mid/High register.
 - **Church reverb** — procedurally-generated cathedral acoustic, adjustable wet level.
 - **Smooth swell** — the drone breathes in and out; a limiter keeps the mix clean.
+- **Remembers your setup** — all settings persist between sessions.
+- **Stays awake** — a screen wake-lock keeps the device from sleeping while sounding.
 
 ## Getting started
 

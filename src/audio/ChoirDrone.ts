@@ -19,6 +19,8 @@ export interface ChoirParams {
   breath: number; // 0..1
   /** Total detune spread across the choir, in cents. */
   spread: number;
+  /** Level (0..1) of a sustained bass voice one octave below the ison. */
+  bass: number;
 }
 
 function createNoiseBuffer(ctx: AudioContext): AudioBuffer {
@@ -33,6 +35,8 @@ export class ChoirDrone {
   private ctx: AudioContext;
   private noise: AudioBuffer;
   private voices: IsonVoice[] = [];
+  private bassVoice: IsonVoice | null = null;
+  private bassGain: GainNode;
   private params: ChoirParams;
   private freq = 130.81;
   private sounding = false;
@@ -46,6 +50,9 @@ export class ChoirDrone {
     this.noise = createNoiseBuffer(ctx);
     this.output = ctx.createGain();
     this.output.gain.value = 1;
+    this.bassGain = ctx.createGain();
+    this.bassGain.gain.value = params.bass;
+    this.bassGain.connect(this.output);
     this.build();
   }
 
@@ -72,6 +79,19 @@ export class ChoirDrone {
       voice.connect(this.output);
       this.voices.push(voice);
     }
+
+    // A single, steady bass voice an octave below — the choir's foundation.
+    this.bassVoice = new IsonVoice(this.ctx, this.noise, {
+      detuneCents: 0,
+      pan: 0,
+      vibratoRate: vibratoRate * 0.85,
+      vibratoDepth: vibratoDepth * 0.5,
+      driftRate: 0.08,
+      driftDepth: 3,
+      breathLevel: breath * 0.5,
+      formants: formantsFor("oo"),
+    });
+    this.bassVoice.connect(this.bassGain);
   }
 
   private teardown(when: number): void {
@@ -80,12 +100,18 @@ export class ChoirDrone {
       v.disconnect();
     }
     this.voices = [];
+    if (this.bassVoice) {
+      this.bassVoice.stop(when);
+      this.bassVoice.disconnect();
+      this.bassVoice = null;
+    }
   }
 
   /** Move the ison to a new frequency, gliding over `glide` seconds. */
   setPitch(freq: number, glide = 0.18): void {
     this.freq = freq;
     for (const v of this.voices) v.setFrequency(freq, glide);
+    this.bassVoice?.setFrequency(freq / 2, glide);
   }
 
   setVowel(vowel: Vowel): void {
@@ -98,11 +124,18 @@ export class ChoirDrone {
     this.params.vibratoDepth = depth;
     this.params.vibratoRate = rate;
     for (const v of this.voices) v.setVibrato(depth, rate);
+    this.bassVoice?.setVibrato(depth * 0.5, rate * 0.85);
   }
 
   setBreath(level: number): void {
     this.params.breath = level;
     for (const v of this.voices) v.setBreath(level);
+    this.bassVoice?.setBreath(level * 0.5);
+  }
+
+  setBass(level: number): void {
+    this.params.bass = level;
+    this.bassGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.1);
   }
 
   /** Rebuild the ensemble with a new singer count (seamless if sounding). */
@@ -114,6 +147,7 @@ export class ChoirDrone {
     this.build();
     if (this.sounding) {
       for (const v of this.voices) v.start(this.freq, t);
+      this.bassVoice?.start(this.freq / 2, t);
     }
   }
 
@@ -121,6 +155,7 @@ export class ChoirDrone {
     this.freq = freq;
     const t = this.ctx.currentTime;
     for (const v of this.voices) v.start(freq, t);
+    this.bassVoice?.start(freq / 2, t);
     this.sounding = true;
   }
 

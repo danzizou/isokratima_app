@@ -12,6 +12,7 @@
  */
 
 import type { Formant } from "./formants";
+import { voiceWave } from "./voiceWave";
 
 export interface VoiceConfig {
   /** Static detune (cents) that spreads this voice within the choir. */
@@ -44,6 +45,8 @@ export class IsonVoice {
   private vibratoGain: GainNode;
   private driftLfo: OscillatorNode;
   private driftGain: GainNode;
+  private shimmerLfo: OscillatorNode;
+  private shimmerGain: GainNode;
   private breath: AudioBufferSourceNode;
   private breathFilter: BiquadFilterNode;
   private breathGain: GainNode;
@@ -57,8 +60,9 @@ export class IsonVoice {
     // --- tone source: two saws, one slightly detuned, for inner richness ---
     this.osc1 = ctx.createOscillator();
     this.osc2 = ctx.createOscillator();
-    this.osc1.type = "sawtooth";
-    this.osc2.type = "sawtooth";
+    const wave = voiceWave(ctx);
+    this.osc1.setPeriodicWave(wave);
+    this.osc2.setPeriodicWave(wave);
     this.osc1.detune.value = config.detuneCents;
     this.osc2.detune.value = config.detuneCents + 6; // gentle internal chorus
 
@@ -91,6 +95,15 @@ export class IsonVoice {
     this.voiceGain = ctx.createGain();
     this.voiceGain.gain.value = 1;
     this.buildFormants(config.formants);
+
+    // Slow amplitude shimmer — the gentle swell of a held human breath.
+    this.shimmerLfo = ctx.createOscillator();
+    this.shimmerLfo.type = "sine";
+    this.shimmerLfo.frequency.value = 0.07 + Math.random() * 0.13;
+    this.shimmerGain = ctx.createGain();
+    this.shimmerGain.gain.value = 0.06;
+    this.shimmerLfo.connect(this.shimmerGain);
+    this.shimmerGain.connect(this.voiceGain.gain);
 
     // --- breath / air layer ---
     this.breath = ctx.createBufferSource();
@@ -171,10 +184,22 @@ export class IsonVoice {
     this.started = true;
     this.osc1.frequency.value = freq;
     this.osc2.frequency.value = freq;
+
+    // Humanised entrance: each singer joins after a small, random delay and
+    // fades in over a slightly different time, so the choir gathers rather than
+    // snapping on all at once.
+    const delay = Math.random() * 0.6;
+    const fade = 0.5 + Math.random() * 0.9;
+    this.output.gain.cancelScheduledValues(when);
+    this.output.gain.setValueAtTime(0.0001, when);
+    this.output.gain.setValueAtTime(0.0001, when + delay);
+    this.output.gain.linearRampToValueAtTime(1, when + delay + fade);
+
     this.osc1.start(when);
     this.osc2.start(when);
     this.vibratoLfo.start(when);
     this.driftLfo.start(when);
+    this.shimmerLfo.start(when);
     this.breath.start(when);
   }
 
@@ -185,6 +210,7 @@ export class IsonVoice {
       this.osc2,
       this.vibratoLfo,
       this.driftLfo,
+      this.shimmerLfo,
       this.breath,
     ]) {
       try {

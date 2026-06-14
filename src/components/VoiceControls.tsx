@@ -57,6 +57,15 @@ export function VoiceControls() {
         format={(v) => `${v.toFixed(1)} Hz`}
       />
       <Slider
+        label="Bass foundation"
+        value={s.bass}
+        min={0}
+        max={1}
+        step={0.01}
+        onChange={s.setBass}
+        format={(v) => `${Math.round(v * 100)}%`}
+      />
+      <Slider
         label="Breath"
         value={s.breath}
         min={0}

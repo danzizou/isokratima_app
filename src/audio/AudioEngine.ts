@@ -68,6 +68,13 @@ export class AudioEngine {
     limiter.attack.value = 0.005;
     limiter.release.value = 0.25;
 
+    // Gentle warmth: roll off the extreme top so the mix sounds rounded and
+    // wooden, like voices in a stone church rather than a bright synth.
+    const warmth = ctx.createBiquadFilter();
+    warmth.type = "lowpass";
+    warmth.frequency.value = 6000;
+    warmth.Q.value = 0.5;
+
     this.master = ctx.createGain();
     this.master.gain.value = this.config.volume;
 
@@ -76,8 +83,9 @@ export class AudioEngine {
     this.envelope.connect(this.dryGain);
     this.envelope.connect(this.convolver);
     this.convolver.connect(this.wetGain);
-    this.dryGain.connect(limiter);
-    this.wetGain.connect(limiter);
+    this.dryGain.connect(warmth);
+    this.wetGain.connect(warmth);
+    warmth.connect(limiter);
     limiter.connect(this.master);
     this.master.connect(ctx.destination);
 
@@ -137,6 +145,11 @@ export class AudioEngine {
   setBreath(level: number): void {
     this.config.breath = level;
     this.choir?.setBreath(level);
+  }
+
+  setBass(level: number): void {
+    this.config.bass = level;
+    this.choir?.setBass(level);
   }
 
   setVoiceCount(count: number): void {

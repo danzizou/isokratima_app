@@ -1,7 +1,8 @@
 /**
  * Application state — the single source of truth wiring the UI to the
  * {@link AudioEngine}. The engine is created once and lives for the app's
- * lifetime; the store mirrors its parameters so React can render them.
+ * lifetime; the store mirrors its parameters so React can render them, and
+ * persists them to localStorage between sessions.
  */
 
 import { create } from "zustand";
@@ -9,33 +10,73 @@ import { AudioEngine } from "../audio/AudioEngine";
 import type { Vowel } from "../audio/formants";
 import { echosById, ECHOI } from "../music/echoi";
 import { noteFrequency } from "../music/theory";
+import { requestWakeLock, releaseWakeLock } from "../lib/wakeLock";
 
 const DEFAULT_NI_HZ = 130.81; // Ni ≈ C3 — a comfortable low ison register
+const PERSIST_KEY = "isokratima.settings.v1";
 
-const engine = new AudioEngine({
-  voiceCount: 5,
-  vowel: "oo",
-  vibratoDepth: 14,
-  vibratoRate: 5.4,
-  breath: 0.04,
-  spread: 18,
-  reverbMix: 0.45,
-  volume: 0.8,
-});
-
-export interface IsonState {
+/** The user-tunable settings we remember between sessions. */
+interface Persisted {
   echosId: string;
   niBaseHz: number;
   octaveShift: number;
   activeDegree: number;
-  playing: boolean;
   vowel: Vowel;
   voiceCount: number;
   vibratoDepth: number;
   vibratoRate: number;
   breath: number;
+  bass: number;
   reverbMix: number;
   volume: number;
+}
+
+const DEFAULTS: Persisted = {
+  echosId: ECHOI[0].id,
+  niBaseHz: DEFAULT_NI_HZ,
+  octaveShift: 0,
+  activeDegree: ECHOI[0].tonicDegree,
+  vowel: "oo",
+  voiceCount: 5,
+  vibratoDepth: 14,
+  vibratoRate: 5.4,
+  breath: 0.04,
+  bass: 0.3,
+  reverbMix: 0.45,
+  volume: 0.8,
+};
+
+function loadPersisted(): Persisted {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (!raw) return { ...DEFAULTS };
+    const saved = JSON.parse(raw) as Partial<Persisted>;
+    // Guard against a stale echos id from an older build.
+    if (saved.echosId && !ECHOI.some((e) => e.id === saved.echosId)) {
+      delete saved.echosId;
+    }
+    return { ...DEFAULTS, ...saved };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+const initial = loadPersisted();
+
+const engine = new AudioEngine({
+  voiceCount: initial.voiceCount,
+  vowel: initial.vowel,
+  vibratoDepth: initial.vibratoDepth,
+  vibratoRate: initial.vibratoRate,
+  breath: initial.breath,
+  spread: 18,
+  bass: initial.bass,
+  reverbMix: initial.reverbMix,
+  volume: initial.volume,
+});
+
+export interface IsonState extends Persisted {
+  playing: boolean;
 
   currentFrequency: () => number;
   selectEchos: (id: string) => void;
@@ -48,23 +89,14 @@ export interface IsonState {
   setVibratoDepth: (cents: number) => void;
   setVibratoRate: (hz: number) => void;
   setBreath: (level: number) => void;
+  setBass: (level: number) => void;
   setReverbMix: (mix: number) => void;
   setVolume: (volume: number) => void;
 }
 
 export const useIsonStore = create<IsonState>((set, get) => ({
-  echosId: ECHOI[0].id,
-  niBaseHz: DEFAULT_NI_HZ,
-  octaveShift: 0,
-  activeDegree: ECHOI[0].tonicDegree,
+  ...initial,
   playing: false,
-  vowel: "oo",
-  voiceCount: 5,
-  vibratoDepth: 14,
-  vibratoRate: 5.4,
-  breath: 0.04,
-  reverbMix: 0.45,
-  volume: 0.8,
 
   currentFrequency: () => {
     const s = get();
@@ -75,22 +107,22 @@ export const useIsonStore = create<IsonState>((set, get) => ({
   selectEchos: (id) => {
     const echos = echosById(id);
     set({ echosId: id, activeDegree: echos.tonicDegree });
-    const freq = get().currentFrequency();
-    if (get().playing) engine.setPitch(freq);
+    if (get().playing) engine.setPitch(get().currentFrequency());
   },
 
   setActiveDegree: (degree) => {
     set({ activeDegree: degree });
-    const freq = get().currentFrequency();
-    if (get().playing) engine.setPitch(freq);
+    if (get().playing) engine.setPitch(get().currentFrequency());
   },
 
   togglePlay: () => {
     if (get().playing) {
       engine.stop();
+      void releaseWakeLock();
       set({ playing: false });
     } else {
       void engine.play(get().currentFrequency());
+      void requestWakeLock();
       set({ playing: true });
     }
   },
@@ -130,6 +162,11 @@ export const useIsonStore = create<IsonState>((set, get) => ({
     engine.setBreath(level);
   },
 
+  setBass: (level) => {
+    set({ bass: level });
+    engine.setBass(level);
+  },
+
   setReverbMix: (mix) => {
     set({ reverbMix: mix });
     engine.setReverbMix(mix);
@@ -140,3 +177,27 @@ export const useIsonStore = create<IsonState>((set, get) => ({
     engine.setVolume(volume);
   },
 }));
+
+// Persist the tunable settings whenever they change (the engine already holds
+// the live values; this just remembers them for next time).
+useIsonStore.subscribe((s) => {
+  const toSave: Persisted = {
+    echosId: s.echosId,
+    niBaseHz: s.niBaseHz,
+    octaveShift: s.octaveShift,
+    activeDegree: s.activeDegree,
+    vowel: s.vowel,
+    voiceCount: s.voiceCount,
+    vibratoDepth: s.vibratoDepth,
+    vibratoRate: s.vibratoRate,
+    breath: s.breath,
+    bass: s.bass,
+    reverbMix: s.reverbMix,
+    volume: s.volume,
+  };
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));
+  } catch {
+    /* storage may be unavailable (private mode) — ignore */
+  }
+});
