@@ -29,6 +29,9 @@ interface Persisted {
   bass: number;
   reverbMix: number;
   volume: number;
+  fadeIn: number;
+  fadeOut: number;
+  glide: number;
 }
 
 const DEFAULTS: Persisted = {
@@ -44,6 +47,9 @@ const DEFAULTS: Persisted = {
   bass: 0.25,
   reverbMix: 0.35,
   volume: 0.8,
+  fadeIn: 0.7,
+  fadeOut: 0.6,
+  glide: 0.15,
 };
 
 function loadPersisted(): Persisted {
@@ -73,6 +79,9 @@ const engine = new AudioEngine({
   bass: initial.bass,
   reverbMix: initial.reverbMix,
   volume: initial.volume,
+  fadeIn: initial.fadeIn,
+  fadeOut: initial.fadeOut,
+  glide: initial.glide,
 });
 
 export interface IsonState extends Persisted {
@@ -92,6 +101,10 @@ export interface IsonState extends Persisted {
   setBass: (level: number) => void;
   setReverbMix: (mix: number) => void;
   setVolume: (volume: number) => void;
+  setFadeIn: (s: number) => void;
+  setFadeOut: (s: number) => void;
+  setGlide: (s: number) => void;
+  playReference: () => void;
 }
 
 export const useIsonStore = create<IsonState>((set, get) => ({
@@ -176,6 +189,28 @@ export const useIsonStore = create<IsonState>((set, get) => ({
     set({ volume });
     engine.setVolume(volume);
   },
+
+  setFadeIn: (s) => {
+    set({ fadeIn: s });
+    const st = get();
+    engine.setFade(s, st.fadeOut, st.glide);
+  },
+
+  setFadeOut: (s) => {
+    set({ fadeOut: s });
+    const st = get();
+    engine.setFade(st.fadeIn, s, st.glide);
+  },
+
+  setGlide: (s) => {
+    set({ glide: s });
+    const st = get();
+    engine.setFade(st.fadeIn, st.fadeOut, s);
+  },
+
+  playReference: () => {
+    engine.playReference(get().currentFrequency(), 2);
+  },
 }));
 
 // Persist the tunable settings whenever they change (the engine already holds
@@ -194,6 +229,9 @@ useIsonStore.subscribe((s) => {
     bass: s.bass,
     reverbMix: s.reverbMix,
     volume: s.volume,
+    fadeIn: s.fadeIn,
+    fadeOut: s.fadeOut,
+    glide: s.glide,
   };
   try {
     localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));

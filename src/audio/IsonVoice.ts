@@ -180,7 +180,7 @@ export class IsonVoice {
     this.breathGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.1);
   }
 
-  start(freq: number, when: number): void {
+  start(freq: number, when: number, fadeIn = 1.0): void {
     if (this.started) return;
     this.started = true;
     this.osc1.frequency.value = freq;
@@ -188,9 +188,10 @@ export class IsonVoice {
 
     // Humanised entrance: each singer joins after a small, random delay and
     // fades in over a slightly different time, so the choir gathers rather than
-    // snapping on all at once.
-    const delay = Math.random() * 0.6;
-    const fade = 0.5 + Math.random() * 0.9;
+    // snapping on all at once. The stagger scales with the overall fadeIn so
+    // short fade settings stay snappy.
+    const delay = Math.random() * fadeIn * 0.25;
+    const fade = Math.max(0.04, fadeIn * (0.4 + Math.random() * 0.4));
     this.output.gain.cancelScheduledValues(when);
     this.output.gain.setValueAtTime(0.0001, when);
     this.output.gain.setValueAtTime(0.0001, when + delay);

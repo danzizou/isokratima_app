@@ -146,16 +146,16 @@ export class ChoirDrone {
     this.teardown(t);
     this.build();
     if (this.sounding) {
-      for (const v of this.voices) v.start(this.freq, t);
-      this.bassVoice?.start(this.freq / 2, t);
+      for (const v of this.voices) v.start(this.freq, t, 0.3);
+      this.bassVoice?.start(this.freq / 2, t, 0.3);
     }
   }
 
-  start(freq: number): void {
+  start(freq: number, fadeIn = 1.0): void {
     this.freq = freq;
     const t = this.ctx.currentTime;
-    for (const v of this.voices) v.start(freq, t);
-    this.bassVoice?.start(freq / 2, t);
+    for (const v of this.voices) v.start(freq, t, fadeIn);
+    this.bassVoice?.start(freq / 2, t, fadeIn);
     this.sounding = true;
   }
 

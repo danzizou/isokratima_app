@@ -4,16 +4,18 @@ import { ParallageGrid } from "./components/ParallageGrid";
 import { EchosSelector } from "./components/EchosSelector";
 import { TransportControls } from "./components/TransportControls";
 import { QuickTuning } from "./components/QuickTuning";
+import { QuickIson } from "./components/QuickIson";
+import { ReferenceButton } from "./components/ReferenceButton";
 import { SettingsSheet } from "./components/SettingsSheet";
 
 export default function App() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+    <div className="mx-auto flex min-h-full max-w-md flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] md:max-w-4xl md:gap-6 md:px-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-xl tracking-wide text-gold-300">
+          <h1 className="font-serif text-xl tracking-wide text-gold-300 md:text-2xl">
             Ἰσοκράτημα
           </h1>
           <p className="text-[10px] uppercase tracking-[0.25em] text-gold-600">
@@ -29,17 +31,29 @@ export default function App() {
         </button>
       </header>
 
-      <EchosSelector />
+      {/* Two-column on tablet / landscape; single column on phone portrait. */}
+      <div className="grid gap-5 md:grid-cols-[1.05fr_1fr] md:items-start md:gap-8">
+        {/* Left column: focal point — current note + transport */}
+        <div className="flex flex-col gap-4 md:gap-6">
+          <NoteDisplay />
+          <div className="flex items-center justify-center gap-5">
+            <TransportControls />
+            <ReferenceButton />
+          </div>
+          <div className="hidden md:block">
+            <QuickTuning />
+          </div>
+        </div>
 
-      <NoteDisplay />
-
-      <ParallageGrid />
-
-      <div className="mt-2 flex justify-center">
-        <TransportControls />
+        {/* Right column: mode + notes + moving ison */}
+        <div className="flex flex-col gap-4 md:gap-5">
+          <EchosSelector />
+          <QuickIson />
+          <ParallageGrid />
+        </div>
       </div>
 
-      <div className="mt-auto pt-2">
+      <div className="mt-auto md:hidden">
         <QuickTuning />
         <p className="mt-2 text-center text-[10px] text-gold-600/50">
           Tap a note to move the ison · ◆ marks the mode's resting note

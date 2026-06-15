@@ -17,14 +17,17 @@ import { ChoirDrone, type ChoirParams } from "./ChoirDrone";
 import { createChurchImpulse } from "./reverb";
 import type { Vowel } from "./formants";
 
-const ATTACK = 1.8; // seconds — slow, choir-like swell
-const RELEASE = 1.4;
-
 export interface EngineConfig extends ChoirParams {
   /** Reverb wet amount, 0..1. */
   reverbMix: number;
   /** Master volume, 0..1. */
   volume: number;
+  /** Seconds for the choir to swell in when starting. */
+  fadeIn: number;
+  /** Seconds for the choir to fade out when stopping. */
+  fadeOut: number;
+  /** Seconds the choir takes to glide from one ison note to another. */
+  glide: number;
 }
 
 export class AudioEngine {
@@ -107,11 +110,12 @@ export class AudioEngine {
       clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
     }
-    this.choir!.start(freq);
+    const fadeIn = this.config.fadeIn;
+    this.choir!.start(freq, fadeIn);
     const t = ctx.currentTime;
     this.envelope.gain.cancelScheduledValues(t);
     this.envelope.gain.setValueAtTime(this.envelope.gain.value, t);
-    this.envelope.gain.linearRampToValueAtTime(1, t + ATTACK);
+    this.envelope.gain.linearRampToValueAtTime(1, t + fadeIn);
     this.playing = true;
   }
 
@@ -119,16 +123,49 @@ export class AudioEngine {
   stop(): void {
     if (!this.ctx || !this.choir || !this.playing) return;
     const t = this.ctx.currentTime;
+    const fadeOut = this.config.fadeOut;
     this.envelope.gain.cancelScheduledValues(t);
     this.envelope.gain.setValueAtTime(this.envelope.gain.value, t);
-    this.envelope.gain.linearRampToValueAtTime(0, t + RELEASE);
+    this.envelope.gain.linearRampToValueAtTime(0, t + fadeOut);
     this.playing = false;
     const choir = this.choir;
-    this.fadeTimer = setTimeout(() => choir.stop(), (RELEASE + 0.05) * 1000);
+    this.fadeTimer = setTimeout(() => choir.stop(), (fadeOut + 0.05) * 1000);
   }
 
   setPitch(freq: number): void {
-    this.choir?.setPitch(freq);
+    this.choir?.setPitch(freq, this.config.glide);
+  }
+
+  setFade(fadeIn: number, fadeOut: number, glide: number): void {
+    this.config.fadeIn = fadeIn;
+    this.config.fadeOut = fadeOut;
+    this.config.glide = glide;
+  }
+
+  /**
+   * Play a short, pure sine tone at `freq` — a clean pitch reference for
+   * warming-up or tuning the voice. Independent of the choir, so it works
+   * whether the ison is sounding or not.
+   */
+  playReference(freq: number, duration = 2): void {
+    const ctx = this.ensure();
+    if (ctx.state === "suspended") void ctx.resume();
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(this.master);
+    const t = ctx.currentTime;
+    const peak = 0.25;
+    const ramp = 0.06;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(peak, t + ramp);
+    gain.gain.setValueAtTime(peak, t + duration - ramp);
+    gain.gain.linearRampToValueAtTime(0, t + duration);
+    osc.start(t);
+    osc.stop(t + duration + 0.05);
   }
 
   setVowel(vowel: Vowel): void {

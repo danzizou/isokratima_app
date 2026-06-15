@@ -92,6 +92,41 @@ export function VoiceControls() {
         onChange={s.setVolume}
         format={(v) => `${Math.round(v * 100)}%`}
       />
+
+      <div className="border-t border-wax-700 pt-3">
+        <div className="mb-2 text-[10px] uppercase tracking-[0.2em] text-gold-600">
+          Fades
+        </div>
+        <div className="space-y-3">
+          <Slider
+            label="Fade in (start)"
+            value={s.fadeIn}
+            min={0.05}
+            max={4}
+            step={0.05}
+            onChange={s.setFadeIn}
+            format={(v) => `${v.toFixed(2)} s`}
+          />
+          <Slider
+            label="Fade out (stop)"
+            value={s.fadeOut}
+            min={0.05}
+            max={4}
+            step={0.05}
+            onChange={s.setFadeOut}
+            format={(v) => `${v.toFixed(2)} s`}
+          />
+          <Slider
+            label="Glide (note switch)"
+            value={s.glide}
+            min={0.01}
+            max={1.5}
+            step={0.01}
+            onChange={s.setGlide}
+            format={(v) => `${v.toFixed(2)} s`}
+          />
+        </div>
+      </div>
     </div>
   );
 }
