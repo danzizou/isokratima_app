@@ -5,6 +5,7 @@ import {
   PARALLAGE,
   moriaToRatio,
   noteFrequency,
+  noteAt,
   type ScaleFamily,
 } from "../theory";
 import { ECHOI, echosById } from "../echoi";
@@ -87,6 +88,28 @@ describe("noteFrequency", () => {
       expect(f).toBeGreaterThan(prev);
       prev = f;
     }
+  });
+});
+
+describe("noteAt (extended-range parallage)", () => {
+  it("returns the canonical PARALLAGE entry for degrees 0..7", () => {
+    for (let d = 0; d <= 7; d++) {
+      const r = noteAt(d);
+      expect(r.greek).toBe(PARALLAGE[d].greek);
+      expect(r.isMain).toBe(true);
+      expect(r.octaveOffset).toBe(0);
+    }
+  });
+
+  it("wraps negative degrees to the previous octave", () => {
+    expect(noteAt(-1)).toMatchObject({ name: "Zo", octaveOffset: -1, isMain: false });
+    expect(noteAt(-4)).toMatchObject({ name: "Ga", octaveOffset: -1, isMain: false });
+    expect(noteAt(-7)).toMatchObject({ name: "Ni", octaveOffset: -1, isMain: false });
+  });
+
+  it("wraps degrees above 7 to the next octave", () => {
+    expect(noteAt(8)).toMatchObject({ name: "Pa", octaveOffset: 1, isMain: false });
+    expect(noteAt(11)).toMatchObject({ name: "Di", octaveOffset: 1, isMain: false });
   });
 });
 

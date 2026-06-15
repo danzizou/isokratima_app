@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { VoiceControls } from "./VoiceControls";
+import { PresetManager } from "./PresetManager";
 
 /**
  * A slide-up bottom sheet for the advanced choir / mix settings. Keeps the main
@@ -43,7 +44,7 @@ export function SettingsSheet({
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-wax-600" />
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-400">
-            Choir & Mix
+            Settings
           </h2>
           <button
             onClick={onClose}
@@ -52,8 +53,19 @@ export function SettingsSheet({
             Done
           </button>
         </div>
-        <div className="max-h-[65vh] overflow-y-auto pb-2">
-          <VoiceControls />
+        <div className="max-h-[65vh] space-y-6 overflow-y-auto pb-2">
+          <section>
+            <h3 className="mb-2 text-[10px] uppercase tracking-[0.25em] text-gold-500">
+              Presets
+            </h3>
+            <PresetManager />
+          </section>
+          <section>
+            <h3 className="mb-2 text-[10px] uppercase tracking-[0.25em] text-gold-500">
+              Choir &amp; Mix
+            </h3>
+            <VoiceControls />
+          </section>
         </div>
       </aside>
     </>

@@ -11,6 +11,11 @@ import type { Vowel } from "../audio/formants";
 import { echosById, ECHOI } from "../music/echoi";
 import { noteFrequency } from "../music/theory";
 import { requestWakeLock, releaseWakeLock } from "../lib/wakeLock";
+import {
+  loadPresets,
+  savePresets,
+  type NamedPreset,
+} from "./presets";
 
 const DEFAULT_NI_HZ = 130.81; // Ni ≈ C3 — a comfortable low ison register
 const PERSIST_KEY = "isokratima.settings.v1";
@@ -86,6 +91,7 @@ const engine = new AudioEngine({
 
 export interface IsonState extends Persisted {
   playing: boolean;
+  presets: NamedPreset[];
 
   currentFrequency: () => number;
   selectEchos: (id: string) => void;
@@ -105,11 +111,16 @@ export interface IsonState extends Persisted {
   setFadeOut: (s: number) => void;
   setGlide: (s: number) => void;
   playReference: () => void;
+
+  savePresetAs: (name: string) => void;
+  loadPreset: (id: string) => void;
+  deletePreset: (id: string) => void;
 }
 
 export const useIsonStore = create<IsonState>((set, get) => ({
   ...initial,
   playing: false,
+  presets: loadPresets(),
 
   currentFrequency: () => {
     const s = get();
@@ -210,6 +221,71 @@ export const useIsonStore = create<IsonState>((set, get) => ({
 
   playReference: () => {
     engine.playReference(get().currentFrequency(), 2);
+  },
+
+  savePresetAs: (name) => {
+    const s = get();
+    const preset: NamedPreset = {
+      id: `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim() || "Untitled",
+      echosId: s.echosId,
+      niBaseHz: s.niBaseHz,
+      octaveShift: s.octaveShift,
+      activeDegree: s.activeDegree,
+      vowel: s.vowel,
+      voiceCount: s.voiceCount,
+      vibratoDepth: s.vibratoDepth,
+      vibratoRate: s.vibratoRate,
+      breath: s.breath,
+      bass: s.bass,
+      reverbMix: s.reverbMix,
+      volume: s.volume,
+      fadeIn: s.fadeIn,
+      fadeOut: s.fadeOut,
+      glide: s.glide,
+      createdAt: Date.now(),
+    };
+    const presets = [...s.presets, preset];
+    set({ presets });
+    savePresets(presets);
+  },
+
+  loadPreset: (id) => {
+    const p = get().presets.find((x) => x.id === id);
+    if (!p) return;
+    set({
+      echosId: p.echosId,
+      niBaseHz: p.niBaseHz,
+      octaveShift: p.octaveShift,
+      activeDegree: p.activeDegree,
+      vowel: p.vowel,
+      voiceCount: p.voiceCount,
+      vibratoDepth: p.vibratoDepth,
+      vibratoRate: p.vibratoRate,
+      breath: p.breath,
+      bass: p.bass,
+      reverbMix: p.reverbMix,
+      volume: p.volume,
+      fadeIn: p.fadeIn,
+      fadeOut: p.fadeOut,
+      glide: p.glide,
+    });
+    // Push the loaded values into the live engine.
+    engine.setVowel(p.vowel);
+    engine.setVoiceCount(p.voiceCount);
+    engine.setVibrato(p.vibratoDepth, p.vibratoRate);
+    engine.setBreath(p.breath);
+    engine.setBass(p.bass);
+    engine.setReverbMix(p.reverbMix);
+    engine.setVolume(p.volume);
+    engine.setFade(p.fadeIn, p.fadeOut, p.glide);
+    if (get().playing) engine.setPitch(get().currentFrequency());
+  },
+
+  deletePreset: (id) => {
+    const presets = get().presets.filter((p) => p.id !== id);
+    set({ presets });
+    savePresets(presets);
   },
 }));
 

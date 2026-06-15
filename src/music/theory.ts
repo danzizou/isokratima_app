@@ -101,3 +101,30 @@ export function noteFrequency(
 export function moriaToCents(moria: number): number {
   return (moria / MORIA_PER_OCTAVE) * 1200;
 }
+
+/**
+ * Resolve any integer parallage degree (positive or negative) to the canonical
+ * note name plus an octave offset. Lets the UI display extended-range notes
+ * (Γα, Δι, Κε, Ζω below Νη, or Πα', Βου', Γα', Δι' above Νη') without
+ * special-casing each call site.
+ */
+export interface ResolvedNote extends ParallageNote {
+  /** -1 = an octave below the main scale, 0 = main, +1 = above, etc. */
+  octaveOffset: number;
+  /** True when the note sits within the canonical Νη..Νη' octave. */
+  isMain: boolean;
+}
+
+export function noteAt(degree: number): ResolvedNote {
+  let idx = degree;
+  let octaveOffset = 0;
+  while (idx < 0) {
+    idx += 7;
+    octaveOffset -= 1;
+  }
+  while (idx > 7) {
+    idx -= 7;
+    octaveOffset += 1;
+  }
+  return { ...PARALLAGE[idx], octaveOffset, isMain: octaveOffset === 0 };
+}

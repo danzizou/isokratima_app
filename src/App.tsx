@@ -4,7 +4,6 @@ import { ParallageGrid } from "./components/ParallageGrid";
 import { EchosSelector } from "./components/EchosSelector";
 import { TransportControls } from "./components/TransportControls";
 import { QuickTuning } from "./components/QuickTuning";
-import { QuickIson } from "./components/QuickIson";
 import { ReferenceButton } from "./components/ReferenceButton";
 import { SettingsSheet } from "./components/SettingsSheet";
 
@@ -45,10 +44,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right column: mode + notes + moving ison */}
+        {/* Right column: mode + extended-range parallage grid */}
         <div className="flex flex-col gap-4 md:gap-5">
           <EchosSelector />
-          <QuickIson />
           <ParallageGrid />
         </div>
       </div>
