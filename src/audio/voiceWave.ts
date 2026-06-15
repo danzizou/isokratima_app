@@ -13,12 +13,13 @@ export function voiceWave(ctx: BaseAudioContext): PeriodicWave {
   const cached = cache.get(ctx);
   if (cached) return cached;
 
-  const harmonics = 32;
+  const harmonics = 20;
   const real = new Float32Array(harmonics + 1);
   const imag = new Float32Array(harmonics + 1);
   for (let n = 1; n <= harmonics; n++) {
-    // Sawtooth-like 1/n falloff with an extra exponential roll-off for warmth.
-    imag[n] = (1 / n) * Math.exp(-n * 0.16);
+    // Sawtooth-like 1/n falloff with a steeper exponential roll-off so the
+    // upper partials don't excite formant ringing as bright hiss.
+    imag[n] = (1 / n) * Math.exp(-n * 0.28);
   }
   const wave = ctx.createPeriodicWave(real, imag, { disableNormalization: false });
   cache.set(ctx, wave);

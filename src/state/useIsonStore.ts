@@ -37,12 +37,12 @@ const DEFAULTS: Persisted = {
   octaveShift: 0,
   activeDegree: ECHOI[0].tonicDegree,
   vowel: "oo",
-  voiceCount: 5,
-  vibratoDepth: 14,
-  vibratoRate: 5.4,
-  breath: 0.04,
-  bass: 0.3,
-  reverbMix: 0.45,
+  voiceCount: 4,
+  vibratoDepth: 8,
+  vibratoRate: 5.2,
+  breath: 0,
+  bass: 0.25,
+  reverbMix: 0.35,
   volume: 0.8,
 };
 

@@ -25,14 +25,17 @@ export function createChurchImpulse(
   for (let ch = 0; ch < 2; ch++) {
     const data = impulse.getChannelData(ch);
     // A short pre-delay-free build, then exponential decay of decorrelated noise.
-    let lp = 0;
+    // Two cascaded one-pole low-passes make the tail much darker, so the reverb
+    // sounds like stone walls rather than bright noise.
+    let lp1 = 0;
+    let lp2 = 0;
     for (let i = 0; i < length; i++) {
       const t = i / length;
       const envelope = Math.pow(1 - t, decay);
-      const white = Math.random() * 2 - 1;
-      // One-pole low-pass to roll off harshness and warm the tail.
-      lp += 0.35 * (white - lp);
-      data[i] = lp * envelope;
+      const white = (Math.random() * 2 - 1) * 0.5;
+      lp1 += 0.12 * (white - lp1);
+      lp2 += 0.18 * (lp1 - lp2);
+      data[i] = lp2 * envelope;
     }
   }
   return impulse;

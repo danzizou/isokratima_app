@@ -111,8 +111,9 @@ export class IsonVoice {
     this.breath.loop = true;
     this.breathFilter = ctx.createBiquadFilter();
     this.breathFilter.type = "bandpass";
-    this.breathFilter.frequency.value = 1200;
-    this.breathFilter.Q.value = 0.7;
+    // Tighter, lower band — sounds like soft air rather than radio hiss.
+    this.breathFilter.frequency.value = 600;
+    this.breathFilter.Q.value = 2.0;
     this.breathGain = ctx.createGain();
     this.breathGain.gain.value = config.breathLevel;
     this.breath.connect(this.breathFilter);
